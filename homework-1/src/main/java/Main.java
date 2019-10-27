@@ -1,6 +1,8 @@
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Main {
 
@@ -9,6 +11,39 @@ public class Main {
     private int width, height;
     private int numCars;
     private List<Car> cars = new ArrayList<> ();
+
+    private String stateToString (State state) {
+        StringBuilder sb = new StringBuilder ();
+        int[][] map = new int[height][width];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                map[y][x] = -1;
+            }
+        }
+        for (PlacedCar pc : state.placedCars) {
+            final int fromX = pc.point.x;
+            final int fromY = pc.point.y;
+            final int toX = pc.point.x + pc.width;
+            final int toY = pc.point.y + pc.height;
+            for (int y = fromY; y < toY; y++) {
+                for (int x = fromX; x < toX; x++) {
+                    map[y][x] = pc.car.id + 1;
+                }
+            }
+        }
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                sb.append (map[y][x]);
+                if (x != width - 1) {
+                    sb.append ("\t");
+                }
+            }
+            if (y != height - 1) {
+                sb.append ("\n");
+            }
+        }
+        return sb.toString ();
+    }
 
     public Main (InputStream input, PrintStream output) {
         this.input = input;
@@ -36,25 +71,23 @@ public class Main {
 
         List<Decision> decisions = new ArrayList<> ();
 
-        for (Car car : state.remainingCars) {
+        Car car = state.remainingCars.get (0);
 
-            for (Point point : state.availablePoints) {
-                if (width - point.x >= car.width
-                        && height - point.y >= car.height) {
+        for (Point point : state.availablePoints) {
+            if (width - point.x >= car.width
+                    && height - point.y >= car.height) {
+                decisions.add (
+                        new Decision (car, false, point)
+                );
+            }
+            if (car.width != car.height) {
+                if (width - point.x >= car.height
+                        && height - point.y >= car.width) {
                     decisions.add (
-                            new Decision (car, false, point)
+                            new Decision (car, true, point)
                     );
                 }
-                if (car.width != car.height) {
-                    if (width - point.x >= car.height
-                            && height - point.y >= car.width) {
-                        decisions.add (
-                                new Decision (car, true, point)
-                        );
-                    }
-                }
             }
-
         }
 
         Iterator<Decision> iterator = decisions.iterator ();
@@ -64,9 +97,8 @@ public class Main {
 
             final int x1 = decision.point.x;
             final int y1 = decision.point.y;
-            final int w1 = x1 + (decision.rotated ? decision.car.height : decision.car.width);
-            final int h1 = y1 + (decision.rotated ? decision.car.width : decision.car.height);
-            boolean remove = false;
+            final int w1 = decision.rotated ? decision.car.height : decision.car.width;
+            final int h1 = decision.rotated ? decision.car.width : decision.car.height;
             for (PlacedCar placedCar : state.placedCars) {
 
                 final int x2 = placedCar.point.x;
@@ -85,6 +117,10 @@ public class Main {
             }
 
         }
+
+        decisions.sort (
+                Comparator.comparingInt ((Decision dc) -> dc.point.x).thenComparingInt (dc -> dc.point.y)
+        );
 
         return decisions;
 
@@ -111,12 +147,15 @@ public class Main {
                 availablePoints.remove (new Point (x, y));
             }
         }
+        availablePoints.sort (
+                Comparator.comparingInt ((Point p) -> p.x).thenComparingInt (p -> p.y)
+        );
 
         return new State (placedCars, remainingCars, availablePoints);
 
     }
 
-    private Result findSolution (State state) {
+    private Result findSolution (int level, State state) {
 
         List<Decision> decisions = validDecisions (state);
         for (Decision decision : decisions) {
@@ -126,7 +165,7 @@ public class Main {
             if (result.finished) {
                 return result;
             }
-            result = findSolution (stateAfterDecision);
+            result = findSolution (level + 1, stateAfterDecision);
             if (result != null && result.finished) {
                 return result;
             }
@@ -146,6 +185,9 @@ public class Main {
                 initialAvailablePoints.add (new Point (x, y));
             }
         }
+        cars.sort (
+                (c1, c2) -> -1 * Integer.compare (c1.width * c1.height, c2.width * c2.height)
+        );
 
         State initialState = new State (
                 Collections.emptyList (),
@@ -153,32 +195,9 @@ public class Main {
                 initialAvailablePoints
         );
 
-        Result result = findSolution (initialState);
+        Result result = findSolution (1, initialState);
         if (result != null && result.finished) {
-            int[][] map = new int[height][width];
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    map[y][x] = -1;
-                }
-            }
-            for (PlacedCar pc : result.state.placedCars) {
-                final int fromX = pc.point.x;
-                final int fromY = pc.point.y;
-                final int toX = pc.point.x + pc.width;
-                final int toY = pc.point.y + pc.height;
-                for (int y = fromY; y < toY; y++) {
-                    for (int x = fromX; x < toX; x++) {
-                        map[y][x] = pc.car.id;
-                    }
-                }
-            }
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    output.print (map[y][x] + 1);
-                    if (x != width - 1) output.print ("\t");
-                }
-                if (y != height - 1) output.println ();
-            }
+            output.println (stateToString (result.state));
         } else {
             System.err.println ("NO RESULT FOUND!");
         }
@@ -209,11 +228,28 @@ public class Main {
             this.availablePoints = new ArrayList<> (availablePoints);
         }
 
+        public String cacheKey () {
+            StringBuilder sb = new StringBuilder ();
+            placedCars.stream ().sorted (Comparator.comparing (pc -> pc.car.id))
+                    .forEach (
+                            pc -> sb.append ("[A")
+                                    .append (pc.car.id)
+                                    .append (",").append (pc.point.x).append (",").append (pc.point.y)
+                                    .append (",").append (pc.rotated ? "1" : "0")
+                                    .append ("]")
+                    );
+            remainingCars.stream ().sorted (Comparator.comparing (c -> c.id))
+                    .forEach (
+                            car -> sb.append ("[B").append (car.id).append ("]")
+                    );
+            return sb.toString ();
+        }
+
         @Override
         public String toString () {
             return "placed cars: " + placedCars
-                    + ",\n remaining cars: " + remainingCars
-                    + ",\n available points: " + availablePoints;
+                    + ", remaining cars: " + remainingCars
+                    + ", available points: " + availablePoints;
 
         }
 
