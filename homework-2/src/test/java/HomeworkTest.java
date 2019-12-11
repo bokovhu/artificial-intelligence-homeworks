@@ -1,8 +1,6 @@
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.util.*;
 
 public class HomeworkTest {
@@ -58,8 +56,22 @@ public class HomeworkTest {
     }
 
     @Test
+    public void generateTestInput () throws Exception {
+
+        try (FileWriter fw = new FileWriter ("hw2-example.in");
+             BufferedWriter bw = new BufferedWriter (fw)
+        ) {
+            bw.write (generateInput ());
+        } catch (Exception exc) {
+            exc.printStackTrace ();
+        }
+
+    }
+
+    @Test
     public void test () throws Exception {
 
+        /*
         ByteArrayInputStream inputStream = new ByteArrayInputStream (
                 generateInput ().getBytes ()
         );
@@ -70,6 +82,7 @@ public class HomeworkTest {
         m.solve ();
 
         System.out.println (new String (outputBaos.toByteArray ()));
+         */
 
     }
 
