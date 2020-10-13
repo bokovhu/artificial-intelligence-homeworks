@@ -25,7 +25,7 @@
         <java.target>1.8</java.target>
         <java.encoding>UTF-8</java.encoding>
 
-        <version.test.junit>4.12</version.test.junit>
+        <version.test.junit>4.13.1</version.test.junit>
         <version.test.commons-io>2.6</version.test.commons-io>
 
     </properties>
