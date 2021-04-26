@@ -26,7 +26,7 @@
         <java.encoding>UTF-8</java.encoding>
 
         <version.test.junit>4.12</version.test.junit>
-        <version.test.commons-io>2.6</version.test.commons-io>
+        <version.test.commons-io>2.7</version.test.commons-io>
 
     </properties>
 
